@@ -4,8 +4,8 @@ import { RouterView, useRoute as useRoute$1, createMemoryHistory, createRouter, 
 import { createSharedComposable } from '@vueuse/core';
 import { extendTailwindMerge } from 'tailwind-merge';
 import { _api, addAPIProvider, setCustomIconsLoader } from '@iconify/vue';
-import moment from 'moment';
 import { nanoid } from 'nanoid';
+import moment from 'moment';
 import { createClient } from '@supabase/supabase-js';
 import { ssrRenderSuspense, ssrRenderComponent, ssrRenderVNode } from 'vue/server-renderer';
 import { u as useHead$1, h as headSymbol, a as useSeoMeta$1 } from '../routes/renderer.mjs';
@@ -460,17 +460,17 @@ const _routes = [
   {
     name: "app",
     path: "/app",
-    component: () => import('./app-DExwiOhy.mjs'),
+    component: () => import('./app-CX8dnYZ8.mjs'),
     children: [
       {
         name: "app-groups",
         path: "groups",
-        component: () => import('./groups-BcuuHjBR.mjs'),
+        component: () => import('./groups-DPA4Bo0T.mjs'),
         children: [
           {
             name: "app-groups-group-group_id",
             path: "group/:group_id?",
-            component: () => import('./_group_id_-35UCCmyk.mjs')
+            component: () => import('./_group_id_-CoVjIeKT.mjs')
           }
         ]
       },
@@ -482,12 +482,12 @@ const _routes = [
       {
         name: "app-settings",
         path: "settings",
-        component: () => import('./settings-BMDH9Qe9.mjs')
+        component: () => import('./settings-By9gcTlt.mjs')
       },
       {
         name: "app-settlements",
         path: "settlements",
-        component: () => import('./settlements-QzAmzEH6.mjs')
+        component: () => import('./settlements-BgARgBI_.mjs')
       }
     ]
   },
@@ -495,7 +495,7 @@ const _routes = [
     name: "index",
     path: "/",
     meta: __nuxt_page_meta || {},
-    component: () => import('./index-qqSgo1Fb.mjs')
+    component: () => import('./index-B4G09qar.mjs')
   }
 ];
 const _wrapInTransition = (props, children) => {
@@ -1581,7 +1581,7 @@ const plugin = /* @__PURE__ */ defineNuxtPlugin({
     };
   }
 });
-const LazyIcon = defineAsyncComponent(() => import('./index-CkXSRQJd.mjs').then((r) => r["default"] || r.default || r));
+const LazyIcon = defineAsyncComponent(() => import('./index-DMPXWIV5.mjs').then((r) => r["default"] || r.default || r));
 const lazyGlobalComponents = [
   ["Icon", LazyIcon]
 ];
@@ -1918,6 +1918,268 @@ const getSupabase = () => {
     client = createClient(supabaseUrl, supabaseAnonKey);
   }
   return client;
+};
+const round = (val) => Math.round((Number(val) + Number.EPSILON) * 100) / 100;
+const computeTransaction = (transaction) => {
+  for (const [payer, val] of Object.entries(transaction.payers)) {
+    transaction.payers[payer] = round(val);
+  }
+  for (const [splitter, val] of Object.entries(transaction.splitters)) {
+    transaction.splitters[splitter] = round(val);
+  }
+  const totalCost = Object.values(transaction.payers).reduce(
+    (a, b) => round(Number(a) + Number(b)),
+    0
+  );
+  const totalSplit = Object.values(transaction.splitters).reduce(
+    (a, b) => round(Number(a) + Number(b)),
+    0
+  );
+  const splits = { ...transaction.splitters };
+  const members = Object.keys(splits);
+  members.sort();
+  for (const split of Object.keys(splits)) {
+    if (transaction.splitType === 1) {
+      splits[split] = totalCost / members.length;
+    } else {
+      splits[split] = totalCost * splits[split];
+      splits[split] /= totalSplit;
+    }
+    splits[split] = round(splits[split]);
+  }
+  const newTotalSplit = Object.values(splits).reduce(
+    (a, b) => round(Number(a) + Number(b)),
+    0
+  );
+  if (members[0]) {
+    const diff = totalCost - newTotalSplit;
+    if (diff > 0) {
+      splits[members[0]] = round(splits[members[0]] + diff);
+    }
+  }
+  return {
+    ...transaction,
+    totalCost,
+    splits
+  };
+};
+const groupGetBalances = (group) => {
+  const balances = {};
+  for (const member of Object.keys(group.members || {})) {
+    balances[member] = 0;
+  }
+  for (const transaction of Object.values(group.transactions || {})) {
+    const computedTransaction = computeTransaction(transaction);
+    for (const [payer, value] of Object.entries(computedTransaction.payers)) {
+      balances[payer] ||= 0;
+      balances[payer] = round(balances[payer] + Number(value));
+    }
+    for (const [splitter, value] of Object.entries(
+      computedTransaction.splits
+    )) {
+      balances[splitter] ||= 0;
+      balances[splitter] = round(balances[splitter] - Number(value));
+    }
+  }
+  return balances;
+};
+const groupGetPayments = (group) => {
+  const payments = [];
+  const balances = Object.entries(groupGetBalances(group)).map(([a, b]) => [
+    b,
+    a
+  ]);
+  balances.sort();
+  let i = 0, j = balances.length - 1;
+  while (i < j) {
+    if (balances[i][0] === 0) {
+      i++;
+    } else if (balances[j][0] === 0) {
+      j--;
+    } else if (-balances[i][0] > balances[j][0]) {
+      payments.push({
+        from: balances[i][1],
+        to: balances[j][1],
+        value: round(balances[j][0])
+      });
+      balances[i][0] += balances[j][0];
+      balances[j][0] = 0;
+    } else {
+      payments.push({
+        from: balances[i][1],
+        to: balances[j][1],
+        value: round(-balances[i][0])
+      });
+      balances[j][0] += balances[i][0];
+      balances[i][0] = 0;
+    }
+  }
+  return payments;
+};
+const useGroups = /* @__PURE__ */ defineStore("groups", {
+  state: () => ({
+    loading: true,
+    groups: {},
+    currentGroup: null,
+    currentTransaction: null
+  }),
+  actions: {
+    setCurrentGroup(id) {
+      this.currentGroup = id;
+    },
+    setCurrentTransaction(id) {
+      this.currentTransaction = id;
+    },
+    setGroups(groups) {
+      this.groups = groups;
+      this.loading = false;
+    },
+    setGroup(group) {
+      this.groups ||= {};
+      this.groups[group.id] = group;
+    },
+    async setGroupName(groupID, name) {
+      const group = this.groups[groupID];
+      group.name = name;
+      const activity = await setGroupName(groupID, name, group.myID);
+      this.addActivity(groupID, activity);
+    },
+    async setGroupCurrency(groupID, currency) {
+      const group = this.groups[groupID];
+      group.currency = currency;
+      const activity = await setGroupCurrency(groupID, currency, group.myID);
+      this.addActivity(groupID, activity);
+    },
+    async addTransaction(groupID, transaction) {
+      const activity = await addTransactionToGroup(groupID, transaction, this.groups[groupID]?.myID);
+      if (activity) this.addActivity(groupID, activity);
+    },
+    async updateTransaction(groupID, transaction) {
+      const activity = await updateTransactionInGroup(groupID, transaction, this.groups[groupID]?.myID);
+      if (activity) this.addActivity(groupID, activity);
+    },
+    async deleteTransaction(groupID, transactionID) {
+      const activity = await deleteTransactionFromGroup(groupID, transactionID, this.groups[groupID]?.myID);
+      if (activity) this.addActivity(groupID, activity);
+    },
+    async addMember(groupID, member) {
+      const group = this.groups[groupID];
+      if (!group.members) group.members = {};
+      group.members[member.id] = member;
+      await addMemberToGroup(groupID, member);
+    },
+    async updateMember(groupID, member) {
+      const group = this.groups[groupID];
+      group.members[member.id] = member;
+      member.name ||= "Unnamed User";
+      await updateMemberInGroup(groupID, member.id, { name: member.name, site_id: member.siteID });
+    },
+    async deleteMember(groupID, id) {
+      const group = this.groups[groupID];
+      if (group.members) delete group.members[id];
+      await deleteMemberFromGroup(groupID, id);
+    },
+    async assignMember(groupID, id) {
+      const group = this.groups[groupID];
+      const old = group.myID;
+      group.myID = id;
+      if (old) {
+        this.updateMember(groupID, {
+          ...group.members[old],
+          siteID: null
+        });
+      }
+      this.updateMember(groupID, {
+        ...group.members[id],
+        siteID: group.mySiteID
+      });
+    },
+    async addActivity(groupID, activity) {
+      const group = this.groups[groupID];
+      group.activityList ||= [];
+      group.activityList.push(activity);
+    }
+  },
+  getters: {
+    getGroupedTransactionsByGroupID(state) {
+      return (groupID) => {
+        const monthMap = {};
+        const transactionOrder = [
+          ...state.groups[groupID]?.transactionOrder || []
+        ].reverse();
+        for (const transactionID of transactionOrder) {
+          const transaction = state.groups[groupID]?.transactions?.[transactionID];
+          if (transaction) {
+            const month = moment(transaction.created_at).format("MMMM YYYY");
+            if (!monthMap[month]) {
+              monthMap[month] = { month, expenses: [], payments: [] };
+            }
+            if (transaction.type === "payment") {
+              monthMap[month].payments.push(transaction);
+            } else {
+              monthMap[month].expenses.push(transaction);
+            }
+          }
+        }
+        return Object.values(monthMap);
+      };
+    },
+    groupsList(state) {
+      return Object.values(state.groups);
+    },
+    getGroupByID(state) {
+      return (id) => state.groups[id];
+    },
+    getBalancesByGroupID() {
+      return (id) => {
+        return groupGetBalances(this.getGroupByID(id));
+      };
+    },
+    getPaymentsByGroupID() {
+      return (id) => groupGetPayments(this.getGroupByID(id));
+    },
+    getMembersList(state) {
+      return (id) => Object.values(state.groups[id]?.members || {});
+    },
+    getMemberName(state) {
+      return (groupID, memberID, lowercase) => {
+        const group = state.groups[groupID];
+        const name = memberID === group.myID ? lowercase ? "you" : "You" : group.members[memberID]?.name;
+        return name || "Unnamed User";
+      };
+    },
+    getGroupCurrency(state) {
+      return (id) => state.groups[id]?.currency || "₹";
+    },
+    getAllActivity(state) {
+      const activity = [];
+      for (const group of Object.values(state.groups)) {
+        activity.push(
+          group.activityList.map((a) => ({
+            ...a,
+            groupID: group.id,
+            myID: group.myID
+          }))
+        );
+      }
+      const activityFlat = activity.flat();
+      activityFlat.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      return activityFlat;
+    }
+  }
+});
+const updateGroups = async () => {
+  useGroups().setGroups(await getGroups());
+};
+const useGroupID = () => useGroups().currentGroup;
+const useName = () => useState("name", () => "");
+const setName = (name) => {
+  useName().value = name;
+  localStorage.setItem("peersplit.name", name);
+  for (const group of Object.values(useGroups().groups)) {
+    const member = group.members[group.myID];
+    if (member) useGroups().updateMember(group.id, { ...member, name });
+  }
 };
 const getDeviceId = () => {
   let id = localStorage.getItem("peersplit.device_id");
@@ -2360,267 +2622,59 @@ const importSplitwise = async (groupID, myID, members, transactions) => {
   });
   await updateGroup(groupID);
 };
-const round = (val) => Math.round((Number(val) + Number.EPSILON) * 100) / 100;
-const computeTransaction = (transaction) => {
-  for (const [payer, val] of Object.entries(transaction.payers)) {
-    transaction.payers[payer] = round(val);
-  }
-  for (const [splitter, val] of Object.entries(transaction.splitters)) {
-    transaction.splitters[splitter] = round(val);
-  }
-  const totalCost = Object.values(transaction.payers).reduce(
-    (a, b) => round(Number(a) + Number(b)),
-    0
+const refreshQueues = {};
+const queueGroupRefresh = (groupID) => {
+  if (refreshQueues[groupID]) clearTimeout(refreshQueues[groupID]);
+  refreshQueues[groupID] = setTimeout(() => {
+    delete refreshQueues[groupID];
+    updateGroup(groupID);
+  }, 300);
+};
+const supabaseChannel = () => {
+  const supabase = getSupabase();
+  const channel = supabase.channel("peersplit-realtime");
+  channel.on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "members" },
+    (payload) => {
+      const gid = payload.new?.group_id || payload.old?.group_id;
+      if (gid) queueGroupRefresh(gid);
+    }
+  ).on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "expenses" },
+    (payload) => {
+      const gid = payload.new?.group_id || payload.old?.group_id;
+      if (gid) queueGroupRefresh(gid);
+    }
+  ).on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "payments" },
+    (payload) => {
+      const gid = payload.new?.group_id || payload.old?.group_id;
+      if (gid) queueGroupRefresh(gid);
+    }
+  ).on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "activity" },
+    (payload) => {
+      const gid = payload.new?.group_id || payload.old?.group_id;
+      if (gid) queueGroupRefresh(gid);
+    }
+  ).on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "groups" },
+    (payload) => {
+      const gid = payload.new?.id || payload.old?.id;
+      if (gid) queueGroupRefresh(gid);
+    }
   );
-  const totalSplit = Object.values(transaction.splitters).reduce(
-    (a, b) => round(Number(a) + Number(b)),
-    0
-  );
-  const splits = { ...transaction.splitters };
-  const members = Object.keys(splits);
-  members.sort();
-  for (const split of Object.keys(splits)) {
-    if (transaction.splitType === 1) {
-      splits[split] = totalCost / members.length;
-    } else {
-      splits[split] = totalCost * splits[split];
-      splits[split] /= totalSplit;
+  channel.subscribe((status) => {
+    if (status === "SUBSCRIBED") {
+      console.info("Supabase real-time connected");
     }
-    splits[split] = round(splits[split]);
-  }
-  const newTotalSplit = Object.values(splits).reduce(
-    (a, b) => round(Number(a) + Number(b)),
-    0
-  );
-  if (members[0]) {
-    const diff = totalCost - newTotalSplit;
-    if (diff > 0) {
-      splits[members[0]] = round(splits[members[0]] + diff);
-    }
-  }
-  return {
-    ...transaction,
-    totalCost,
-    splits
-  };
-};
-const groupGetBalances = (group) => {
-  const balances = {};
-  for (const member of Object.keys(group.members || {})) {
-    balances[member] = 0;
-  }
-  for (const transaction of Object.values(group.transactions || {})) {
-    const computedTransaction = computeTransaction(transaction);
-    for (const [payer, value] of Object.entries(computedTransaction.payers)) {
-      balances[payer] ||= 0;
-      balances[payer] = round(balances[payer] + Number(value));
-    }
-    for (const [splitter, value] of Object.entries(
-      computedTransaction.splits
-    )) {
-      balances[splitter] ||= 0;
-      balances[splitter] = round(balances[splitter] - Number(value));
-    }
-  }
-  return balances;
-};
-const groupGetPayments = (group) => {
-  const payments = [];
-  const balances = Object.entries(groupGetBalances(group)).map(([a, b]) => [
-    b,
-    a
-  ]);
-  balances.sort();
-  let i = 0, j = balances.length - 1;
-  while (i < j) {
-    if (balances[i][0] === 0) {
-      i++;
-    } else if (balances[j][0] === 0) {
-      j--;
-    } else if (-balances[i][0] > balances[j][0]) {
-      payments.push({
-        from: balances[i][1],
-        to: balances[j][1],
-        value: round(balances[j][0])
-      });
-      balances[i][0] += balances[j][0];
-      balances[j][0] = 0;
-    } else {
-      payments.push({
-        from: balances[i][1],
-        to: balances[j][1],
-        value: round(-balances[i][0])
-      });
-      balances[j][0] += balances[i][0];
-      balances[i][0] = 0;
-    }
-  }
-  return payments;
-};
-const useGroups = /* @__PURE__ */ defineStore("groups", {
-  state: () => ({
-    loading: true,
-    groups: {},
-    currentGroup: null,
-    currentTransaction: null
-  }),
-  actions: {
-    setCurrentGroup(id) {
-      this.currentGroup = id;
-    },
-    setCurrentTransaction(id) {
-      this.currentTransaction = id;
-    },
-    setGroups(groups) {
-      this.groups = groups;
-      this.loading = false;
-    },
-    setGroup(group) {
-      this.groups ||= {};
-      this.groups[group.id] = group;
-    },
-    async setGroupName(groupID, name) {
-      const group = this.groups[groupID];
-      group.name = name;
-      const activity = await setGroupName(groupID, name, group.myID);
-      this.addActivity(groupID, activity);
-    },
-    async setGroupCurrency(groupID, currency) {
-      const group = this.groups[groupID];
-      group.currency = currency;
-      const activity = await setGroupCurrency(groupID, currency, group.myID);
-      this.addActivity(groupID, activity);
-    },
-    async addTransaction(groupID, transaction) {
-      const activity = await addTransactionToGroup(groupID, transaction, this.groups[groupID]?.myID);
-      if (activity) this.addActivity(groupID, activity);
-    },
-    async updateTransaction(groupID, transaction) {
-      const activity = await updateTransactionInGroup(groupID, transaction, this.groups[groupID]?.myID);
-      if (activity) this.addActivity(groupID, activity);
-    },
-    async deleteTransaction(groupID, transactionID) {
-      const activity = await deleteTransactionFromGroup(groupID, transactionID, this.groups[groupID]?.myID);
-      if (activity) this.addActivity(groupID, activity);
-    },
-    async addMember(groupID, member) {
-      const group = this.groups[groupID];
-      if (!group.members) group.members = {};
-      group.members[member.id] = member;
-      await addMemberToGroup(groupID, member);
-    },
-    async updateMember(groupID, member) {
-      const group = this.groups[groupID];
-      group.members[member.id] = member;
-      member.name ||= "Unnamed User";
-      await updateMemberInGroup(groupID, member.id, { name: member.name, site_id: member.siteID });
-    },
-    async deleteMember(groupID, id) {
-      const group = this.groups[groupID];
-      if (group.members) delete group.members[id];
-      await deleteMemberFromGroup(groupID, id);
-    },
-    async assignMember(groupID, id) {
-      const group = this.groups[groupID];
-      const old = group.myID;
-      group.myID = id;
-      if (old) {
-        this.updateMember(groupID, {
-          ...group.members[old],
-          siteID: null
-        });
-      }
-      this.updateMember(groupID, {
-        ...group.members[id],
-        siteID: group.mySiteID
-      });
-    },
-    async addActivity(groupID, activity) {
-      const group = this.groups[groupID];
-      group.activityList ||= [];
-      group.activityList.push(activity);
-    }
-  },
-  getters: {
-    getGroupedTransactionsByGroupID(state) {
-      return (groupID) => {
-        const monthMap = {};
-        const transactionOrder = [
-          ...state.groups[groupID]?.transactionOrder || []
-        ].reverse();
-        for (const transactionID of transactionOrder) {
-          const transaction = state.groups[groupID]?.transactions?.[transactionID];
-          if (transaction) {
-            const month = moment(transaction.created_at).format("MMMM YYYY");
-            if (!monthMap[month]) {
-              monthMap[month] = { month, expenses: [], payments: [] };
-            }
-            if (transaction.type === "payment") {
-              monthMap[month].payments.push(transaction);
-            } else {
-              monthMap[month].expenses.push(transaction);
-            }
-          }
-        }
-        return Object.values(monthMap);
-      };
-    },
-    groupsList(state) {
-      return Object.values(state.groups);
-    },
-    getGroupByID(state) {
-      return (id) => state.groups[id];
-    },
-    getBalancesByGroupID() {
-      return (id) => {
-        return groupGetBalances(this.getGroupByID(id));
-      };
-    },
-    getPaymentsByGroupID() {
-      return (id) => groupGetPayments(this.getGroupByID(id));
-    },
-    getMembersList(state) {
-      return (id) => Object.values(state.groups[id]?.members || {});
-    },
-    getMemberName(state) {
-      return (groupID, memberID, lowercase) => {
-        const group = state.groups[groupID];
-        const name = memberID === group.myID ? lowercase ? "you" : "You" : group.members[memberID]?.name;
-        return name || "Unnamed User";
-      };
-    },
-    getGroupCurrency(state) {
-      return (id) => state.groups[id]?.currency || "₹";
-    },
-    getAllActivity(state) {
-      const activity = [];
-      for (const group of Object.values(state.groups)) {
-        activity.push(
-          group.activityList.map((a) => ({
-            ...a,
-            groupID: group.id,
-            myID: group.myID
-          }))
-        );
-      }
-      const activityFlat = activity.flat();
-      activityFlat.sort((a, b) => b.created_at.localeCompare(a.created_at));
-      return activityFlat;
-    }
-  }
-});
-const updateGroups = async () => {
-  useGroups().setGroups(await getGroups());
-};
-const useGroupID = () => useGroups().currentGroup;
-const useName = () => useState("name", () => "");
-const setName = (name) => {
-  useName().value = name;
-  localStorage.setItem("peersplit.name", name);
-  for (const group of Object.values(useGroups().groups)) {
-    const member = group.members[group.myID];
-    if (member) useGroups().updateMember(group.id, { ...member, name });
-  }
+  });
+  return channel;
 };
 const init_OlIVM6w_hEauvmnEqhRrWl85lkjql8dTYfaeOXeSLHQ = /* @__PURE__ */ defineNuxtPlugin({
   hooks: {
@@ -2637,6 +2691,22 @@ const init_OlIVM6w_hEauvmnEqhRrWl85lkjql8dTYfaeOXeSLHQ = /* @__PURE__ */ defineN
         } else if (!groupsStore.currentGroup) {
           groupsStore.setCurrentGroup(groupIDs[0]);
         }
+        supabaseChannel();
+        const autoAssignMember = async () => {
+          const gs = useGroups();
+          const gid = gs.currentGroup;
+          if (!gid) return;
+          const group = gs.getGroupByID(gid);
+          if (!group || group.myID) return;
+          const targetName = "Pranav navghare";
+          const member = Object.values(group.members || {}).find(
+            (m) => m.name?.toLowerCase() === targetName.toLowerCase()
+          );
+          if (member) {
+            await gs.assignMember(gid, member.id);
+          }
+        };
+        await autoAssignMember();
       } catch (err) {
         console.error("Failed to initialize:", err);
       }
@@ -2973,8 +3043,8 @@ const _sfc_main$1 = {
     const statusText = _error.statusMessage ?? (is404 ? "Page Not Found" : "Internal Server Error");
     const description = _error.message || _error.toString();
     const stack = void 0;
-    const _Error404 = defineAsyncComponent(() => import('./error-404-DKlJPVvG.mjs'));
-    const _Error = defineAsyncComponent(() => import('./error-500-BhPSwHVf.mjs'));
+    const _Error404 = defineAsyncComponent(() => import('./error-404-YLzJO18g.mjs'));
+    const _Error = defineAsyncComponent(() => import('./error-500-qizimAB7.mjs'));
     const ErrorTemplate = is404 ? _Error404 : _Error;
     return (_ctx, _push, _parent, _attrs) => {
       _push(ssrRenderComponent(unref(ErrorTemplate), mergeProps({ status: unref(status), statusText: unref(statusText), statusCode: unref(status), statusMessage: unref(statusText), description: unref(description), stack: unref(stack) }, _attrs), null, _parent));
