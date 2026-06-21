@@ -1,6 +1,6 @@
 {
   "framework": "nuxtjs",
-  "buildCommand": "npx nuxt build",
+  "buildCommand": "npm run build",
   "outputDirectory": ".output/public",
-  "installCommand": "npm install"
+  "installCommand": "npm install && chmod -R +x node_modules/.bin"
 }
