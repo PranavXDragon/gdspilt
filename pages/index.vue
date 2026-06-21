@@ -1,0 +1,249 @@
+<template>
+  <div class="min-h-screen flex flex-col">
+    <!-- Hero Section -->
+    <div class="relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-primary-50/40 via-transparent to-lime-50/40 dark:from-primary-950/20 dark:via-transparent dark:to-lime-950/20 pointer-events-none" />
+      <div class="mx-auto container max-w-[800px] px-6 pb-16 pt-12 flex-grow space-y-6 relative">
+        <div class="text-center space-y-6">
+          <div class="flex flex-col items-center gap-3">
+            <div class="relative">
+              <Icon class="w-24 h-24 drop-shadow-lg" filled :fontControlled="false" />
+            </div>
+            <h1 class="text-5xl sm:text-7xl select-none tracking-tight">
+              <span class="text-primary">Peer</span><span class="text-lime-400">Split</span>
+            </h1>
+            <p class="text-xl sm:text-2xl text-gray-600 dark:text-gray-400 max-w-[500px] leading-relaxed">
+              Track and split group expenses. <span class="font-medium text-gray-800 dark:text-gray-200">100% free, 100% private.</span>
+            </p>
+          </div>
+          <div class="flex flex-row items-center justify-center gap-3 pt-2">
+            <UButton to="/app" size="xl" class="shadow-lg shadow-primary/20">
+              Get Started
+              <template #trailing>
+                <UIcon name="i-heroicons-arrow-right-20-solid" class="w-5 h-5" />
+              </template>
+            </UButton>
+            <UButton
+              variant="outline"
+              to="https://github.com/tanayvk/peersplit"
+              size="xl"
+              target="_blank"
+            >
+              <template #leading>
+                <UIcon name="fa6-brands-github" class="w-5 h-5" />
+              </template>
+              Star on GitHub
+            </UButton>
+          </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-8">
+          <div v-for="feature in features" :key="feature.text"
+            class="flex items-start gap-3 p-4 rounded-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60 hover:border-primary-300 dark:hover:border-primary-600 transition-all duration-200 hover:shadow-md hover:shadow-primary/5"
+          >
+            <div class="shrink-0 w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+              <UIcon :name="feature.icon" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
+            </div>
+            <span class="text-sm text-gray-700 dark:text-gray-300">{{ feature.text }}</span>
+          </div>
+        </div>
+
+        <!-- Product Hunt Alert -->
+        <UAlert
+          icon="i-heroicons-rocket-launch"
+          color="primary"
+          variant="subtle"
+          title="Product Hunt Launch!"
+          description="PeerSplit just launched on Product Hunt! I'd love your support—click below to leave a comment and share your thoughts. Your feedback means a lot!"
+          :actions="[
+            {
+              label: 'Visit Launch',
+              target: '_blank',
+              to: 'https://www.producthunt.com/posts/peersplit',
+              variant: 'solid',
+              color: 'emerald',
+            },
+          ]"
+          class="rounded-xl"
+        />
+
+        <!-- About -->
+        <div class="text-base space-y-3 pt-4 leading-relaxed text-gray-600 dark:text-gray-400">
+          <p>
+            <span class="text-primary font-medium">PeerSplit</span> is a
+            <span class="font-semibold text-gray-800 dark:text-gray-200">free</span> app that helps you split and
+            track group expenses with ease.
+          </p>
+          <p>
+            It's peer-to-peer, so your data stays
+            <span class="font-semibold">completely private</span>—nothing is
+            stored on the cloud.
+          </p>
+          <p>
+            Got feedback or ideas? Reach out to me
+            <UButton class="p-0 text-base" to="https://x.com/tanayvk" variant="link"
+              >@tanayvk</UButton
+            >
+            on X, or create an issue on GitHub.
+          </p>
+        </div>
+
+        <!-- Quick Start Guide -->
+        <div class="space-y-4 pt-2">
+          <h2 class="text-2xl font-semibold flex items-center gap-2">
+            <UIcon name="i-heroicons-rocket-launch" class="w-6 h-6 text-primary" />
+            Quick Start Guide
+          </h2>
+          <div class="text-base space-y-4 text-gray-600 dark:text-gray-400">
+            <p>
+              <span class="text-primary font-medium">PeerSplit</span>
+              works directly in your browser, so you can use it as a web app
+              instantly or install it as a PWA (Progressive Web App) for an even
+              better experience. Here's how:
+            </p>
+
+            <UAccordion
+              :items="[
+                { label: 'On Android (Using Chrome)' },
+                { label: 'On iOS (Using Safari or Chrome)' },
+                { label: 'On Desktop (Chrome or Edge)' },
+              ]"
+              class="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700"
+              :ui="{
+                item: {
+                  color: 'text-gray-800 dark:text-gray-100',
+                },
+              }"
+            >
+              <template #item="slotProps">
+                <div class="text-sm space-y-3 p-4 bg-gray-50/50 dark:bg-gray-800/30">
+                  <ol v-if="slotProps.item.label === 'On Android (Using Chrome)'" class="list-decimal pl-5 space-y-2">
+                    <li>Open <span class="font-semibold">Chrome</span> and visit the <span class="text-primary font-medium">PeerSplit</span> website.</li>
+                    <li>Tap the menu icon (three dots) in the top-right corner.</li>
+                    <li>Select <span class="font-semibold">"Add to Home screen"</span>.</li>
+                    <li>Follow the prompts to install the app and create a shortcut on your home screen.</li>
+                    <li>Now, you can launch <span class="text-primary font-medium">PeerSplit</span> like any other app from your home screen!</li>
+                  </ol>
+                  <ol v-else-if="slotProps.item.label === 'On iOS (Using Safari or Chrome)'" class="list-decimal pl-5 space-y-2">
+                    <li>Open <span class="font-semibold">Safari</span> or <span class="font-semibold">Chrome</span> and navigate to the <span class="text-primary font-medium">PeerSplit</span> website.</li>
+                    <li>Tap the <span class="font-semibold">Share</span> icon at the bottom (the square with an arrow pointing up).</li>
+                    <li>Scroll down and select <span class="font-semibold">"Add to Home Screen"</span>.</li>
+                    <li>Choose a name for the app (PeerSplit is default) and tap <span class="font-semibold">"Add"</span>.</li>
+                    <li><span class="text-primary font-medium">PeerSplit</span> will now appear on your home screen, ready to use like a regular app!</li>
+                  </ol>
+                  <ol v-else class="list-decimal pl-5 space-y-2">
+                    <li>Open <span class="font-semibold">Chrome</span> or <span class="font-semibold">Microsoft Edge</span> and visit the <span class="text-primary font-medium">PeerSplit</span> website.</li>
+                    <li>Look for the install icon (a small plus sign in the address bar) and click it.</li>
+                    <li>Follow the prompts to install <span class="text-primary font-medium">PeerSplit</span> as a desktop app.</li>
+                    <li>Once installed, you can open <span class="text-primary font-medium">PeerSplit</span> from your Start menu or desktop.</li>
+                  </ol>
+                </div>
+              </template>
+            </UAccordion>
+          </div>
+        </div>
+
+        <!-- Devlog -->
+        <div class="space-y-3 pt-2">
+          <h2 class="text-2xl font-semibold flex items-center gap-2">
+            <UIcon name="i-heroicons-document-text" class="w-6 h-6 text-primary" />
+            Devlog
+          </h2>
+          <div class="space-y-2">
+            <p v-for="log in devlog" :key="log.date"
+              class="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2"
+            >
+              <UButton
+                :to="log.link"
+                target="_blank"
+                class="m-0 p-0 shrink-0"
+                variant="link"
+                color="lime"
+                size="sm"
+              >
+                <span class="font-medium whitespace-nowrap">{{ log.date }}</span>
+              </UButton>
+              <span class="text-gray-500 dark:text-gray-500">— {{ log.text }}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+</template>
+
+<script setup>
+import Icon from "~/assets/logo.svg";
+definePageMeta({ colorMode: "dark" });
+
+const devlog = [
+  {
+    date: "Oct 22, 2024",
+    text: "Product Hunt launch!",
+    link: "https://producthunt.com/posts/peersplit",
+  },
+  {
+    date: "Oct 17, 2024",
+    text: "Added Splitwise import and CSV export functionality.",
+    link: "https://x.com/tanayvk/status/1846787787812753444",
+  },
+  {
+    date: "Oct 16, 2024",
+    text: "Added default splits for groups and improved stats.",
+    link: "https://x.com/tanayvk/status/1846498652770218347",
+  },
+  {
+    date: "Oct 12, 2024",
+    text: "The app is live and stable! Turned it into a PWA. Ready for everyone to start using it.",
+    link: "https://x.com/tanayvk/status/1845138111749292519",
+  },
+  {
+    date: "Oct 10, 2024",
+    text: "Fixed a few sync issues, added currency symbol customization, and built out group stats.",
+    link: "https://x.com/tanayvk/status/1844409444639310298",
+  },
+  {
+    date: "Oct 9, 2024",
+    text: "Got peer-to-peer sync working! You can now invite and join groups.",
+    link: "https://x.com/tanayvk/status/1844030889061503127",
+  },
+  {
+    date: "Oct 8, 2024",
+    text: "More UI/UX polish, persisting data locally, and made some progress on peer-to-peer syncing.",
+    link: "https://x.com/tanayvk/status/1843682849402360020",
+  },
+  {
+    date: "Oct 6, 2024",
+    text: "'Simplifying Debts'—added balance and repayment computations.",
+    link: "https://x.com/tanayvk/status/1842957866526973978",
+  },
+  {
+    date: "Oct 5, 2024",
+    text: "Tweaked the UI and built the 'Add Expense' form. Small but crucial stuff!",
+    link: "https://x.com/tanayvk/status/1842574320171929889",
+  },
+  {
+    date: "Oct 4, 2024",
+    text: "Added group UI, started working on the database design, and started looking into peer-to-peer syncing with gun.eco.",
+    link: "https://x.com/tanayvk/status/1842189991688249622",
+  },
+  {
+    date: "Oct 3, 2024",
+    text: "Launched the app with a simple UI and landing page. Minimal but it works!",
+    link: "https://x.com/tanayvk/status/1841837882061082816",
+  },
+];
+
+const features = [
+  { text: "100% free—no signup required", icon: "i-heroicons-shield-check" },
+  { text: "Local-first and works fully offline", icon: "i-heroicons-signal-slash" },
+  { text: "Cross-platform: use it on mobile, desktop, or laptop", icon: "i-heroicons-device-phone-mobile" },
+  { text: "Peer-to-peer sync with friends while keeping data private", icon: "i-heroicons-link" },
+  { text: "Smooth UX that stays out of your way", icon: "i-heroicons-sparkles" },
+  { text: "Available in dark and light modes", icon: "i-heroicons-sun" },
+  { text: "Import from Splitwise, export to CSV", icon: "i-heroicons-arrow-up-tray" },
+];
+</script>

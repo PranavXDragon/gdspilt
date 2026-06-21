@@ -1,0 +1,38 @@
+html {
+  @apply font-sans;
+}
+
+.color-positive {
+  @apply text-lime-500 dark:text-lime-400;
+}
+.color-negative {
+  @apply text-rose-500 dark:text-rose-400;
+}
+.color-neutral {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+/* Hide scrollbar for Chrome, Safari, and newer Edge versions */
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge, and Firefox */
+* {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Page transitions */
+.page-enter-active,
+.page-leave-active {
+  transition: all 0.2s ease-out;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
