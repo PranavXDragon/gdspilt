@@ -186,7 +186,6 @@ export const useGroups = defineStore("groups", {
       }
       this.updateMember(groupID, {
         ...group.members[id],
-        name: useName().value,
         siteID: group.mySiteID,
       });
     },

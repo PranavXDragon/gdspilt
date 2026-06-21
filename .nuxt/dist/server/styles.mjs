@@ -1,6 +1,6 @@
 const interopDefault = r => r.default || r || []
 export default {
-  "node_modules/nuxt/dist/app/entry.js": () => import('./_nuxt/entry-styles.kj32RqW1.mjs').then(interopDefault),
+  "node_modules/nuxt/dist/app/entry.js": () => import('./_nuxt/entry-styles.Ctufl_py.mjs').then(interopDefault),
   "app.vue": () => import('./_nuxt/app-styles.iVmnhZuo.mjs').then(interopDefault),
   "pages/app.vue": () => import('./_nuxt/app-styles.BM2wYfIY.mjs').then(interopDefault),
   "pages/index.vue": () => import('./_nuxt/index-styles.Dc1Ps9Wo.mjs').then(interopDefault),

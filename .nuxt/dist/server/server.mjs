@@ -2698,7 +2698,6 @@ const useGroups = /* @__PURE__ */ defineStore("groups", {
       }
       this.updateMember(groupID, {
         ...group.members[id],
-        name: useName().value,
         siteID: group.mySiteID
       });
     },
